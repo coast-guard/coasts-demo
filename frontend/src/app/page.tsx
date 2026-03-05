@@ -1,16 +1,39 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Contact, fetchContacts, createContact, deleteContact } from "@/lib/api";
+import {
+  Contact,
+  User,
+  fetchContacts,
+  createContact,
+  deleteContact,
+  login,
+  register,
+  logout,
+  fetchMe,
+  setToken,
+  clearToken,
+} from "@/lib/api";
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
+
+  useEffect(() => {
+    fetchMe()
+      .then(setUser)
+      .catch(() => clearToken())
+      .finally(() => setAuthChecked(true));
+  }, []);
 
   const load = useCallback(async () => {
+    if (!user) return;
     try {
       setLoading(true);
       const data = await fetchContacts(search || undefined);
@@ -21,11 +44,41 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, user]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      setError(null);
+      if (isRegister) {
+        const name = formData.get("name") as string;
+        const result = await register(email, password, name);
+        setToken(result.token);
+        setUser(result.user);
+      } else {
+        const result = await login(email, password);
+        setToken(result.token);
+        setUser(result.user);
+      }
+    } catch (err) {
+      setError(String(err instanceof Error ? err.message : err));
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+    setContacts([]);
+  };
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -62,34 +115,57 @@ export default function Home() {
     lead: "#f59e0b",
   };
 
+  if (!authChecked) {
+    return <p style={{ textAlign: "center", marginTop: 60 }}>Loading...</p>;
+  }
+
+  if (!user) {
+    return (
+      <div style={{ maxWidth: 400, margin: "60px auto" }}>
+        <h2 style={{ marginBottom: 20 }}>{isRegister ? "Create Account" : "Sign In"}</h2>
+        {error && (
+          <div style={{ background: "#fee2e2", color: "#dc2626", padding: 12, borderRadius: 6, marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+        <form onSubmit={handleAuth} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {isRegister && <input name="name" placeholder="Name" required style={inputStyle} />}
+          <input name="email" placeholder="Email" required type="email" style={inputStyle} />
+          <input name="password" placeholder="Password" required type="password" minLength={6} style={inputStyle} />
+          <button type="submit" style={btnPrimary}>
+            {isRegister ? "Register" : "Sign In"}
+          </button>
+        </form>
+        <p style={{ marginTop: 16, textAlign: "center", fontSize: 14, color: "#666" }}>
+          {isRegister ? "Already have an account?" : "Don't have an account?"}{" "}
+          <button onClick={() => { setIsRegister(!isRegister); setError(null); }} style={linkBtn}>
+            {isRegister ? "Sign in" : "Register"}
+          </button>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <span style={{ color: "#666", fontSize: 14 }}>
+          Signed in as <strong>{user.name}</strong>
+        </span>
+        <button onClick={handleLogout} style={{ ...linkBtn, fontSize: 14 }}>
+          Sign out
+        </button>
+      </div>
+
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
         <input
           type="text"
           placeholder="Search contacts..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{
-            flex: 1,
-            padding: "10px 14px",
-            borderRadius: 6,
-            border: "1px solid #ddd",
-            fontSize: 14,
-          }}
+          style={{ flex: 1, ...inputStyle }}
         />
-        <button
-          onClick={() => setShowForm(!showForm)}
-          style={{
-            padding: "10px 20px",
-            background: "#1a1a2e",
-            color: "white",
-            border: "none",
-            borderRadius: 6,
-            cursor: "pointer",
-            fontSize: 14,
-          }}
-        >
+        <button onClick={() => setShowForm(!showForm)} style={btnPrimary}>
           {showForm ? "Cancel" : "+ New Contact"}
         </button>
       </div>
@@ -203,4 +279,22 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 6,
   border: "1px solid #ddd",
   fontSize: 14,
+};
+
+const btnPrimary: React.CSSProperties = {
+  padding: "10px 20px",
+  background: "#1a1a2e",
+  color: "white",
+  border: "none",
+  borderRadius: 6,
+  cursor: "pointer",
+  fontSize: 14,
+};
+
+const linkBtn: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  color: "#2563eb",
+  cursor: "pointer",
+  textDecoration: "underline",
 };

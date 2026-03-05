@@ -5,6 +5,7 @@ defmodule Crm.Application do
   def start(_type, _args) do
     children = [
       Crm.Repo,
+      Crm.SessionStore,
       {Phoenix.PubSub, name: Crm.PubSub},
       CrmWeb.Endpoint
     ]
