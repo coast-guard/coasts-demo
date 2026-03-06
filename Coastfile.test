@@ -1,0 +1,19 @@
+[coast]
+extends = "Coastfile"
+autostart = false
+
+# Remove shared services — each test instance gets isolated databases
+[unset]
+shared_services = ["postgres", "redis"]
+ports = ["web", "postgres", "redis"]
+services = ["web"]
+
+[volumes.postgres_data]
+strategy = "isolated"
+service = "postgres"
+mount = "/var/lib/postgresql/data"
+
+[volumes.redis_data]
+strategy = "isolated"
+service = "redis"
+mount = "/data"
