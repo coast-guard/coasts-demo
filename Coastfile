@@ -1,0 +1,40 @@
+[coast]
+name = "crm-demo"
+compose = "./docker-compose.yml"
+primary_port = "web"
+
+[coast.setup]
+packages = ["nodejs", "npm"]
+
+[services.web]
+install = "cd /workspace/frontend && npm install"
+command = "cd /workspace/frontend && npx next dev --port 3000 --hostname 0.0.0.0"
+port = 3000
+restart = "on-failure"
+
+[ports]
+web = 3000
+backend = 4000
+postgres = 5432
+redis = 6379
+
+[shared_services.postgres]
+image = "postgres:15-alpine"
+ports = [5432]
+volumes = ["coasts-demo_postgres_data:/var/lib/postgresql/data"]
+env = { POSTGRES_USER = "postgres", POSTGRES_PASSWORD = "postgres", POSTGRES_DB = "crm_dev" }
+
+[shared_services.redis]
+image = "redis:7-alpine"
+ports = [6379]
+volumes = ["coasts-demo_redis_data:/data"]
+
+[assign]
+default = "none"
+
+[assign.services]
+backend = "hot"
+web = "hot"
+
+[assign.rebuild_triggers]
+backend = ["backend/Dockerfile", "backend/mix.exs", "backend/mix.lock"]
