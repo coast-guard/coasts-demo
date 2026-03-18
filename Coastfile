@@ -2,6 +2,13 @@
 name = "crm-demo"
 compose = "./docker-compose.yml"
 primary_port = "web"
+worktree_dir = [
+    ".worktrees",
+    ".claude/worktrees",
+    "~/.codex/worktrees",
+    "~/conductor/workspaces/coasts-demo",
+    "~/.t3/worktrees/coasts-demo"
+]
 
 [coast.setup]
 packages = ["nodejs", "npm"]
@@ -28,6 +35,11 @@ env = { POSTGRES_USER = "postgres", POSTGRES_PASSWORD = "postgres", POSTGRES_DB 
 image = "redis:7-alpine"
 ports = [6379]
 volumes = ["coasts-demo_redis_data:/data"]
+
+[secrets.test_secret]
+extractor = "file"
+path = "./test-secret.txt"
+inject = "file:/run/secrets/test_secret"
 
 [assign]
 default = "none"
