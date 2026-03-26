@@ -2,6 +2,7 @@
 name = "crm-demo"
 compose = "./docker-compose.yml"
 primary_port = "web"
+private_paths = ["frontend/.next"]
 worktree_dir = [
     ".worktrees",
     ".claude/worktrees",
